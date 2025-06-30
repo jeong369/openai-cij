@@ -1,0 +1,2 @@
+# openai-cij
+Azure OpenAI 
