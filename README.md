@@ -718,16 +718,17 @@ Azure 기반 생성형 AI 프로젝트 만들기
 
 
 
-> **Azure AI Foundry를 사용하여 언어 모델 미세 조정**
+> **[Azure AI Foundry를 사용하여 언어 모델 미세 조정](https://learn.microsoft.com/ko-kr/training/modules/finetune-model-copilot-ai-studio/)**
 
 - 기존 : openai > ai foundry : openai만 사용 가능
 - 지금 : ai foundry > 프로젝트 만들기 : openai, 기타 등등 다 사용 가능
 
 1. 모델 사용 > 프로젝트 만들기 `user24-project` / 지역은 지정된 장소만(`Sweden Central`)
+1. finetuning model을 배포해야 사용 가능 
 
 
 
-> **Azure에서 AI 에이전트 개발 시작**
+> **[Azure에서 AI 에이전트 개발 시작](https://learn.microsoft.com/ko-kr/training/modules/ai-agent-fundamentals/)**
 
 - AI 에이전트를 만들꺼면 lagnGraph를 활용하는게 더 낫다.
 - 8월에 업데이트 후에 사용하는게 좋을지도
@@ -740,13 +741,25 @@ Azure 기반 생성형 AI 프로젝트 만들기
 
 
 
-> **Azure AI Foundry 에이전트 서비스를 사용하여 AI 에이전트 개발**
+> **[Azure AI Foundry 에이전트 서비스를 사용하여 AI 에이전트 개발](https://learn.microsoft.com/ko-kr/training/modules/develop-ai-agent-azure/)**
+
+- ai 에이전트 클라이언트 앱 만들기
+  - ai foundry에서 바로 project를 만들면 리소스는 ai foundry랑 ai foundry project 2개의 리소스가 잡혀있음
+- gpt-4o 는 판단을 잘 하기 때문에 이걸 쓴다.
 
 
 
-> **Azure AI 음성 서비스를 사용하여 음성 번역**
+> 1. [에이전트에 사용자 지정 도구 통합](https://learn.microsoft.com/ko-kr/training/modules/build-agent-with-custom-tools/)
+>
+> - 사용자 지정 도구 사용해서 에이전트 빌드
 
+- https://learn.microsoft.com/ko-kr/training/modules/build-agent-with-custom-tools/
+  - **Azure Functions**
+  - **Azure Logic Apps**
 
+1. 함수 호출 : agent에다 해당 함수를 넘겨놓고 필요 시 호출하는 방법
+2. 트리거와 함께 azure functions 활용(azure 웹앱 기반) : 실시간 처리를 위한 서버리스 컴퓨팅 기능 제공
+3. openai 사양에 따라 연결
 
 
 
@@ -757,6 +770,12 @@ Azure 기반 생성형 AI 프로젝트 만들기
 ----
 
 # MVP 기획
+
+> 준비
+>
+> 9 - 18 주말 사용 가능
+
+
 
 2. **고객 요구사항 분석 서비스**
 
@@ -861,6 +880,7 @@ Azure 기반 생성형 AI 프로젝트 만들기
 
 - 고객 요구사항
   - 샘플 50개 파일로 저장
+  - **실제 문서 몇개 뽑아서 넣어봐야겠다**
 
 | 요구사항 ID | 제목                           | 영향 받는 파트     | 영향 설명                                           |
 | ----------- | ------------------------------ | ------------------ | --------------------------------------------------- |
@@ -885,6 +905,51 @@ Azure 기반 생성형 AI 프로젝트 만들기
   python복사편집# 문서 임베딩 예시
   embedding = openai.Embedding.create(input="고객 요구사항 텍스트", model="text-embedding-ada-002")
   ```
+  
+- 흐름 코드
+
+  - **Azure Blob Storage** – 문서 업로드 저장소
+
+    - Blob 컨테이너 생성
+    - 업로드 시 문서 유형 포함(EX, IA문서, 요구사항)
+
+  - **Azure Cognitive Search** – 인덱스 생성 및  벡터 검색 설정 
+
+    - AI Search 리소스 생성
+
+    - 인덱스에 `데이터 타입` 추가해서 비슷한 유형 IA 문서OR유사 요구사항도 검색 가능하도록 <- 업로드 시 문서 타입 유형 지정(EX. IA문서, 요구사항)
+
+    - 검색 함수 추가 ? 문서 유형별 필터링 지원
+
+      ```python
+      def search_similar_documents(query_text, doc_type="IA", top_k=3):
+          embedding = get_text_embedding(query_text)
+          credential = DefaultAzureCredential()
+          search_client = SearchClient(endpoint=search_service_endpoint, index_name=search_index_name, credential=credential)
+      
+          results = search_client.search(
+              vector=embedding,
+              top_k=top_k,
+              vector_fields="embedding",
+              vector_search_profile="vector-profile",
+              filter=f"type eq '{doc_type}'"
+          )
+      
+          print(f"\n🔍 유사 {doc_type} 문서 검색 결과:")
+          for result in results:
+              print(f"- {result['title']} ({result['type']})\n  {result['content'][:100]}...\n")
+      ```
+
+  - **Azure AI Vision + Text Embedding** – 문서 텍스트 추출 + 임베딩
+
+     - AI Search 내에서 `text-embedding-ada-002` 또는 equivalent embedding model 사용 가능한지 확인
+
+  - **Python SDK** – 전체 흐름 자동화
+
+     `pip install azure-search-documents azure-identity azure-storage-blob` 
+
+     
+
 
 ------
 
@@ -936,6 +1001,16 @@ Azure 기반 생성형 AI 프로젝트 만들기
 - 예상 개발 공수: 3MD
 - 참고 사례: 유사 요구사항 #024, #047
 - 추천 담당자: A파트 김XX, B파트 박XX
+
+> Streamlit 활용한 대시보드
+>
+> 사용자가 질의 입력 →
+>
+> Azure Cognitive Search에서 유사 문서 검색 (벡터 기반) →
+>
+> Streamlit UI에서 표 형태 + 본문 일부 미리보기로 시각화
+
+- 
 
 
 
